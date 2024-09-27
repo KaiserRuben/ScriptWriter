@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "scriptwriter"
+version = "0.1.0"
+description = ""
+authors = ["Ruben Kaiser <ruben@kaiser.fyi>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+langchain-core = "^0.3.6"
+openai = "^1.50.1"
+replicate = "^0.34.1"
+python-dotenv = "^1.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
