@@ -2,10 +2,10 @@
   "max_outline_generation_attempts": 10,
   "max_scene_iterations": 10,
   "good_scene_threshold": 0.8,
-  "llm_provider": "replicate",
-  "llm_model": "meta/meta-llama-3-70b-instruct",
-  "_lm_provider": "ollama",
-    "_llm_model": "llama3.1:latest",
+  "_llm_provider": "replicate",
+  "_llm_model": "meta/meta-llama-3-70b-instruct",
+  "lm_provider": "ollama",
+  "llm_model": "gemma2:27b",
   "llm_fallback_provider": "openai",
   "llm_fallback_model": "gpt-4o"
 }

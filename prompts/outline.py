@@ -19,16 +19,18 @@ Important guidelines:
 
 Respond in JSON format with the following structure:
 {{
+  "title": "Story Title",
+  "concept": "Brief concept description",
   "acts": [
     {{
       "act_number": 1,
-      "title": "...",
-      "description": "..."
+      "title": "Act 1 Title",
+      "description": "Act 1 description"
     }},
     ...
   ]
 }}
-Start with {{... and end with ...}}.
+Start with {{... and end with ...}}. Only return valid json as response.
 
 Ensure that your response includes the exact number of acts as specified or implied in the concept.
 """
@@ -59,7 +61,7 @@ Respond in JSON format with the following structure:
   "is_valid": true/false,
   "feedback": "Detailed feedback explaining why the acts are valid or invalid. If invalid, provide specific points of discrepancy with the original concept."
 }}
-Start with {{... and end with ...}}.
+Start with {{... and end with ...}}. Only return valid json as response.
 
 If any of the above points are not met, or if there are any inconsistencies with the original concept, mark the acts as invalid and provide detailed feedback.
 """
@@ -82,14 +84,13 @@ Respond in JSON format with the structure:
 {{
   "scenes": [
     {{
-      "scene_number": 1, 
-      "title": "...", 
-      "description": "...", 
-      "act": 1
+      "scene_number": "1.1", 
+      "title": "Scene Title", 
+      "description": "Scene description"
     }}
   ]
 }}
-Start with {{... and end with ...}}.
+Start with {{... and end with ...}}. Only return valid json as response.
 """
 
 VALIDATE_KEY_SCENES = """
@@ -138,14 +139,13 @@ Respond in JSON format with the structure:
 {{
   "sub_scenes": [
     {{
-      "scene_number": "1.1", 
-      "title": "...", 
-      "description": "...", 
-      "act": 1
+      "sub_scene_number": "1.1.1", 
+      "title": "Sub-scene Title", 
+      "description": "Sub-scene description"
     }}
   ]
 }}
-Start with {{... and end with ...}}. 
+Start with {{... and end with ...}}. Only return valid json as response.
 """
 
 VALIDATE_SUB_SCENES = """
@@ -190,12 +190,12 @@ Review and refine the provided outline based on the original concept. Your goal 
 1. Consistency: Ensure all elements align with the original concept and maintain internal logic.
 2. Pacing: Evaluate and adjust the story's rhythm, ensuring a balanced flow of events and character development.
 3. Character Development: Strengthen character arcs and interactions to support the overall narrative.
-4. Plot Structure: Refine the sequence of events to create a compelling and coherent story progression.
+4. Plot Structure: Refine the sequence of events to create a compelling and coherent story progression. Make sure, all plot elements are present, pay attention to sup-plots as-well.
 5. Theme Reinforcement: Emphasize key themes throughout the outline to add depth to the narrative.
 
 Guidelines for Modifications:
 - For minor adjustments, modify existing scenes directly.
-- When adding new content, use decimal scene numbers to avoid overwriting existing scenes (e.g., a new scene between 1.2 and 1.3 should be numbered 1.2.1).
+- When adding new content, use decimal scene numbers to avoid overwriting existing scenes (e.g., a new scene between 1.1 and 1.2 should be numbered 1.1.1).
 - Only include parts of the outline that you have modified or added in your response.
 
 Response Format:

@@ -2,8 +2,7 @@ import logging
 from src.script_automator import ScriptAutomator
 from src.utils.file_handlers import load_txt
 
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
     logging.info("Starting script automation process")
