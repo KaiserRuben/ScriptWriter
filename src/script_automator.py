@@ -9,7 +9,7 @@ from prompts.outline import GENERATE_ACTS, VALIDATE_ACTS, GENERATE_KEY_SCENES, V
     VALIDATE_SUB_SCENES, REVIEW_OUTLINE, VALIDATE_FINAL_OUTLINE
 from src.llm.LLMService import LLMService
 from src.scene_generator import SceneGenerator
-from src.utils.file_handlers import load_json, save_json, load_txt
+from src.utils.file_handlers import load_json, save_json, load_txt, save_txt
 from src.utils.sort_and_compare import sort_json_content
 
 
@@ -77,7 +77,7 @@ class ScriptAutomator:
         self.good_scene_threshold = self.config.get('good_scene_threshold', 0.8)
         self.use_local_context = self.config.get('use_local_context', True)
 
-    def run(self, generate_outline=True, generate_characters=True, generate_themes=True, generate_scenes=False):
+    def run(self, generate_outline=False, generate_characters=False, generate_themes=False, generate_scenes=False):
         logging.info("Starting script automation process")
         concept = load_txt('data/concept.txt')
         if generate_outline:
@@ -98,7 +98,6 @@ class ScriptAutomator:
         if generate_scenes:
             scene_generator = SceneGenerator(self.llm_service, self.config, characters, themes)
             scenes = scene_generator.generate_scenes(outline)
-            save_json('output/scenes_final.json', scenes)
 
         logging.info("Generation complete. Check the 'output' folder for results.")
 

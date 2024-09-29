@@ -1,14 +1,50 @@
-from typing import Dict, Any, List
+import json
+from math import inf
+from typing import Dict, Any, List, Optional
 import logging
 
 from tqdm import tqdm
 
-from prompts.scene import GENERATE_SCENE, EVALUATE_SCENE, REFINE_SCENE, EXTRACT_STORY_ELEMENTS
+from prompts.scene import GENERATE_SCENE, EVALUATE_SCENE, REFINE_SCENE, EXTRACT_STORY_ELEMENTS, EVALUATE_FULL_SCRIPT
 from src.llm.LLMService import LLMService
+from src.utils.JSONValidator import JSONValidator
 from src.utils.file_handlers import load_txt, save_json, save_txt
-from src.utils.sort_and_compare import compare_scene_numbers
 
 logger = logging.getLogger(__name__)
+
+
+def generate_scene_with_validation(llm_service: LLMService, prompt: str, max_attempts: int = 3) -> Optional[
+    Dict[str, Any]]:
+    for attempt in range(max_attempts):
+        scene_json = llm_service.generate(prompt, format="json")
+        validated_scene = JSONValidator.validate_scene_json(scene_json)
+
+        if validated_scene:
+            return validated_scene
+        else:
+            print(f"Attempt {attempt + 1} failed. Retrying...")
+
+    print(f"Failed to generate valid JSON after {max_attempts} attempts.")
+    return None
+
+
+def _parse_json_to_markdown(scene_json: Dict[str, Any]) -> str:
+    markdown = f"## Scene {scene_json['scene_number']}: {scene_json['location']} - {scene_json['time']}\n\n"
+
+    for item in scene_json['content']:
+        if item['type'] == 'action':
+            markdown += f"{item['text']}\n\n"
+        elif item['type'] == 'dialog':
+            markdown += f"{item['character'].upper()}\n{item['text']}\n\n"
+        elif item['type'] == 'transition':
+            markdown += f"{item['text'].upper()}\n\n"
+
+    return markdown
+
+
+def _save_scene_output(scene_content: Dict[str, Any], scene_markdown: str, scene_number: str):
+    save_json(f'output/scenes/scene_{scene_number}.json', scene_content)
+    save_txt(f'output/scenes/scene_{scene_number}.md', scene_markdown)
 
 
 class SceneGenerator:
@@ -19,131 +55,98 @@ class SceneGenerator:
         self.characters = characters
         self.themes = themes
         self.style_guide = load_txt("data/style_guide.md")
-        self.good_scene_threshold = config.get('good_scene_threshold', 80)  # Default to 80 out of 100
+        self.good_scene_threshold = config.get('good_scene_threshold', 80)
         self.max_iterations = config.get('max_scene_iterations', 5)
-        self.story_elements = []  # New: Store extracted story elements
+        self.full_script_threshold = config.get('full_script_threshold', 85)
 
     def generate_scenes(self, story: Dict[str, Any]) -> List[Dict[str, Any]]:
         generated_scenes = []
-        generated_scenes_str = ""
-        previous_scene = None
-        current_act_elements = []
+        full_script_markdown = ""
 
         total_sub_scenes = sum([len(scene.get('sub_scenes', [])) for act in story['acts'] for scene in act['scenes']])
         with tqdm(total=total_sub_scenes, desc="Generating scenes", unit="sub-scene") as pbar:
             for act in story['acts']:
-                act_elements = []
                 for scene in act['scenes']:
                     for sub_scene in scene.get('sub_scenes', []):
-                        sub_scene_content = self._generate_single_scene(sub_scene, story, previous_scene,
-                                                                        self.story_elements + current_act_elements)
-                        generated_scenes.append(sub_scene_content)
-                        generated_scenes_str += "\n" + sub_scene_content['content']
+                        scene_content = self._generate_single_scene(sub_scene, story, full_script_markdown)
+                        generated_scenes.append(scene_content)
 
-                        # Extract story elements from the generated scene
-                        new_elements = self._extract_story_elements(sub_scene_content['content'],
-                                                                    sub_scene['sub_scene_number'],
-                                                                    story)
+                        scene_markdown = _parse_json_to_markdown(scene_content['content'])
+                        full_script_markdown += "\n" + scene_markdown
 
-                        # Update story elements
-                        for item in new_elements['story_elements']:
-                            if item['scope'] == 'global':
-                                self.story_elements.append(item)
-                            elif item['scope'] == 'act':
-                                act_elements.append(item)
-                            # 'scene' scope items are not stored for future use
-
-                        current_act_elements = [item for item in current_act_elements if int(item['scene_number'][0]) == act['act_number']]
-
-                        save_json(f'output/sub_scenes/sub_scene_{sub_scene["sub_scene_number"]}.json',
-                                  sub_scene_content)
-                        save_txt(f'output/sub_scenes/up_to_scene/{sub_scene["sub_scene_number"]}.md',
-                                 generated_scenes_str)
-
-                        previous_scene = sub_scene_content['content']
+                        _save_scene_output(scene_content, scene_markdown, sub_scene['sub_scene_number'])
 
                         pbar.update(1)
 
-                # At the end of each act, update the current act elements
-                current_act_elements = act_elements
+        # Save initial full script
+        save_txt('output/full_script_initial.md', full_script_markdown)
+        save_json('output/scenes_initial.json', generated_scenes)
 
-        return generated_scenes
+        # Evaluate and refine full script
+        evaluation = self._evaluate_full_script(full_script_markdown, story)
+        refined_scenes = self._refine_full_script(generated_scenes, evaluation, story)
+
+        # Save refined full script
+        refined_full_script_markdown = "\n".join(
+            [_parse_json_to_markdown(scene['content']) for scene in refined_scenes])
+        save_txt('output/full_script_refined.md', refined_full_script_markdown)
+        save_json('output/scenes_refined.json', refined_scenes)
+
+        return refined_scenes
 
     def _generate_single_scene(self, sub_scene: Dict[str, Any], story: Dict[str, Any],
-                               previous_scene: str, current_elements: List[Dict[str, Any]]) -> Dict[str, Any]:
+                               full_script_markdown: str) -> Dict[str, Any]:
         best_scene = None
         best_score = 0
-        evaluation = {
-            'feedback': "",
-            'total_score': 0
-        }
-        feedback = ""
-        scene_content = ""
 
         for attempt in range(self.max_iterations):
-            if attempt == 0:
-                # Initial generation
-                scene_content = self._generate_scene(sub_scene, story, previous_scene, current_elements)
-            else:
-                # Refine based on previous feedback
-                scene_content = self._refine_scene(scene_content, feedback, sub_scene, story,
-                                                   previous_scene)
+            scene_content = self._generate_scene(sub_scene, story, full_script_markdown)
+            if scene_content is None:
+                continue  # Skip evaluation if generation failed
 
             evaluation = self._evaluate_scene(scene_content, sub_scene, story)
-
-            # check all keys and types of evaluation
-            if (not type(evaluation) == dict) or (not 'total_score' in evaluation.keys()) or (
-            not type(evaluation['total_score']) == int):
-                logger.error(f"Failed to evaluate scene. Evaluation: {evaluation}")
-                total_score = -1
-            else:
-                total_score = evaluation['total_score']
-
-            if (not type(evaluation) == dict) or (not 'feedback' in evaluation.keys()) or (
-            not type(evaluation['feedback']) == str):
-                logger.error(f"Failed to evaluate scene. Evaluation: {evaluation}")
-                feedback = ""
-            else:
-                feedback = evaluation['feedback']
+            total_score = evaluation.get('total_score', 0)
 
             if total_score > best_score:
                 best_scene = scene_content
                 best_score = total_score
 
             if total_score >= self.good_scene_threshold:
-                logger.info(
-                    f"Generated a satisfactory sub-scene after {attempt + 1} attempts with score {total_score}.")
                 return {'scene_number': sub_scene['sub_scene_number'], 'content': scene_content,
                         'evaluation': evaluation}
 
-            logger.info(f"Attempt {attempt + 1} failed with score {total_score}. Feedback: {feedback}")
+            if attempt < self.max_iterations - 1:  # Don't refine on the last iteration
+                scene_content = self._refine_scene(scene_content, evaluation['feedback'], sub_scene, story,
+                                                   full_script_markdown)
 
-        logging.warning(
-            f"Failed to generate a satisfactory sub-scene after {self.max_iterations} attempts. Using the best generated scene.")
         return {'scene_number': sub_scene['sub_scene_number'], 'content': best_scene, 'score': best_score}
 
     def _generate_scene(self, sub_scene: Dict[str, Any], story: Dict[str, Any],
-                        previous_scene: str, current_elements: List[Dict[str, Any]]) -> str:
+                        full_script_markdown: str) -> Optional[Dict[str, Any]]:
+        context_length = self.config.get('context_length', inf)
+        context = full_script_markdown[-context_length:] if len(
+            full_script_markdown) > context_length else full_script_markdown
+        context_length = len(context)
+
         prompt = GENERATE_SCENE.format(
             characters=self.characters,
             themes=self.themes,
             outline=story,
             current_scene=sub_scene,
-            previous_scene=previous_scene,  # Use the actual previous scene content
+            full_script_context=context,
+            context_length=context_length,
             genre=self.config.get('genre', 'unknown'),
-            title=story.get('title', 'Untitled'),
-            story_elements=current_elements
+            title=story.get('title', 'Untitled')
         )
-        if previous_scene is None:
-            prompt += '\nStylistic Guide:\n' + self.style_guide
 
-        return self.llm_service.generate(prompt)
+        return generate_scene_with_validation(self.llm_service, prompt)
 
-    def _evaluate_scene(self, scene_content: str, sub_scene: Dict[str, Any],
+    def _evaluate_scene(self, scene_content: Dict[str, Any], sub_scene: Dict[str, Any],
                         story: Dict[str, Any]) -> Dict[str, Any]:
+        scene_markdown = _parse_json_to_markdown(scene_content)
         prompt = EVALUATE_SCENE.format(
             outline=story,
-            scene_content=scene_content,
+            scene_content=scene_markdown,
             scene_details=sub_scene,
             characters=self.characters,
             themes=self.themes,
@@ -151,26 +154,53 @@ class SceneGenerator:
         )
         return self.llm_service.generate(prompt, format="json")
 
-    def _extract_story_elements(self, scene_content: str, scene_number: str, outline) -> Dict[str, Any]:
-        prompt = EXTRACT_STORY_ELEMENTS.format(
-            scene_content=scene_content,
-            scene_number=scene_number,
-            outline=outline
-        )
+    def _refine_scene(self, scene_content: Dict[str, Any], feedback: str, sub_scene: Dict[str, Any],
+                      story: Dict[str, Any], full_script_markdown: str) -> Optional[Dict[str, Any]]:
+        context_length = self.config.get('context_length', inf)
+        context = full_script_markdown[-context_length:] if len(
+            full_script_markdown) > context_length else full_script_markdown
 
-        extracted_elements = self.llm_service.generate(prompt, format="json")
-        return extracted_elements
-
-    def _refine_scene(self, scene_content: str, feedback: str, sub_scene: Dict[str, Any],
-                      story: Dict[str, Any], previous_scene: str) -> str:
         prompt = REFINE_SCENE.format(
-            scene_content=scene_content,
+            scene_content=json.dumps(scene_content),
             feedback=feedback,
             scene_details=sub_scene,
             characters=self.characters,
             themes=self.themes,
             genre=self.config.get('genre', 'movie'),
-            style_guide=self.style_guide,
-            previous_scene=previous_scene
+            full_script_context=context,
+            context_length=context_length,
         )
-        return self.llm_service.generate(prompt)
+        return generate_scene_with_validation(self.llm_service, prompt)
+
+    def _evaluate_full_script(self, full_script_markdown: str, story: Dict[str, Any]) -> Dict[str, Any]:
+        prompt = EVALUATE_FULL_SCRIPT.format(
+            full_script=full_script_markdown,
+            outline=json.dumps(story),
+            characters=json.dumps(self.characters),
+            themes=json.dumps(self.themes),
+            genre=self.config.get('genre', 'unknown')
+        )
+        evaluation = self.llm_service.generate(prompt, format="json")
+        save_json('output/full_script_evaluation.json', evaluation)
+        return evaluation
+
+    def _refine_full_script(self, scenes: List[Dict[str, Any]], evaluation: Dict[str, Any], story: Dict[str, Any]) -> \
+    List[Dict[str, Any]]:
+        refined_scenes = scenes.copy()
+        total_score = evaluation.get('total_score', 0)
+
+        if total_score >= self.full_script_threshold:
+            return refined_scenes
+
+        scenes_to_improve = evaluation.get('scenes_to_improve', [])
+        for scene_info in scenes_to_improve:
+            scene_id = scene_info['scene_id']
+            scene_index = next((i for i, scene in enumerate(refined_scenes) if scene['scene_number'] == scene_id), None)
+
+            if scene_index is not None:
+                refined_scene = self._refine_scene(refined_scenes[scene_index]['content'], scene_info['suggestions'],
+                                                   story, "\n".join(
+                        [_parse_json_to_markdown(s['content']) for s in refined_scenes]))
+                refined_scenes[scene_index]['content'] = refined_scene
+
+        return refined_scenes
