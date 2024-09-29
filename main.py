@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def main():
     logging.info("Starting script automation process")
     automator = ScriptAutomator()
-    automator.run()
+    automator.run(generate_outline=False, generate_characters=False, generate_themes=False, generate_scenes=True)
     logging.info("Script automation process completed")
 
 
