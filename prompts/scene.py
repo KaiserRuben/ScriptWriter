@@ -32,7 +32,7 @@ Output Format:
 Provide the scene in the following JSON format:
 
 {{
-  "scene_number": "string",
+  "scene_number": "string", // example: "1.2.3"
   "location": "string",
   "time": "string",
   "content": [
@@ -52,14 +52,15 @@ Data:
 Outline:
 {outline}
 
-Scene Details: 
-{scene_details}
-
 Characters: 
 {characters}
 
 Themes: 
 {themes}
+
+Current Scene Description: 
+{scene_details}
+
 
 Current Scene (in Markdown format): 
 {scene_content}

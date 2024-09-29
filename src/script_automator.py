@@ -73,6 +73,8 @@ class ScriptAutomator:
         self.config = load_json('config/settings.json')
         self.llm_service = LLMService(provider_name=self.config.get('llm_provider', 'ollama'),
                                       default_model=self.config.get('llm_model', 'gemma2:27b'))
+        self.llm_service_validation = LLMService(provider_name=self.config.get('llm_provider_validation', 'ollama'),
+                                                 default_model=self.config.get('llm_model_validation', 'gemma2:27b'))
         self.max_iterations = self.config.get('max_scene_iterations', 5)
         self.good_scene_threshold = self.config.get('good_scene_threshold', 0.8)
         self.use_local_context = self.config.get('use_local_context', True)
@@ -96,7 +98,7 @@ class ScriptAutomator:
             themes = load_json('output/themes.json')
 
         if generate_scenes:
-            scene_generator = SceneGenerator(self.llm_service, self.config, characters, themes)
+            scene_generator = SceneGenerator(self.llm_service, self.llm_service_validation, self.config, characters, themes)
             scenes = scene_generator.generate_scenes(outline)
 
         logging.info("Generation complete. Check the 'output' folder for results.")

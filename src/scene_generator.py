@@ -1,6 +1,6 @@
 import json
 from math import inf
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import logging
 
 from tqdm import tqdm
@@ -28,8 +28,24 @@ def generate_scene_with_validation(llm_service: LLMService, prompt: str, max_att
     return None
 
 
-def _parse_json_to_markdown(scene_json: Dict[str, Any]) -> str:
-    markdown = f"## Scene {scene_json['scene_number']}: {scene_json['location']} - {scene_json['time']}\n\n"
+def _parse_json_to_markdown(scene_json: Dict[str, Any], current_act: int = None) -> Tuple[str, int]:
+    markdown = ""
+
+    # Extract act number from scene number (assuming format "1.2.3" where 1 is the act number)
+    try:
+        scene_act = int(scene_json['scene_number'].split('.')[0])
+    except Exception as e:
+        try:
+            scene_act = int(scene_json['scene_number'].split(' ')[1])
+        except Exception as e:
+            scene_act = -1
+
+    # If this is a new act, add the act header
+    if scene_act != current_act:
+        markdown += f"# ACT {scene_act}\n\n---\n\n"
+        current_act = scene_act
+
+    markdown += f"## Scene {scene_json['scene_number']}: {scene_json['location']} - {scene_json['time']}\n\n"
 
     for item in scene_json['content']:
         if item['type'] == 'action':
@@ -39,7 +55,7 @@ def _parse_json_to_markdown(scene_json: Dict[str, Any]) -> str:
         elif item['type'] == 'transition':
             markdown += f"{item['text'].upper()}\n\n"
 
-    return markdown
+    return markdown, current_act
 
 
 def _save_scene_output(scene_content: Dict[str, Any], scene_markdown: str, scene_number: str):
@@ -48,9 +64,10 @@ def _save_scene_output(scene_content: Dict[str, Any], scene_markdown: str, scene
 
 
 class SceneGenerator:
-    def __init__(self, llm_service: LLMService, config: Dict[str, Any], characters: Dict[str, Any],
+    def __init__(self, llm_service: LLMService, llm_service_validation: LLMService, config: Dict[str, Any], characters: Dict[str, Any],
                  themes: Dict[str, Any]):
         self.llm_service = llm_service
+        self.llm_service_validation = llm_service_validation
         self.config = config
         self.characters = characters
         self.themes = themes
@@ -62,6 +79,7 @@ class SceneGenerator:
     def generate_scenes(self, story: Dict[str, Any]) -> List[Dict[str, Any]]:
         generated_scenes = []
         full_script_markdown = ""
+        current_act = None
 
         total_sub_scenes = sum([len(scene.get('sub_scenes', [])) for act in story['acts'] for scene in act['scenes']])
         with tqdm(total=total_sub_scenes, desc="Generating scenes", unit="sub-scene") as pbar:
@@ -71,7 +89,8 @@ class SceneGenerator:
                         scene_content = self._generate_single_scene(sub_scene, story, full_script_markdown)
                         generated_scenes.append(scene_content)
 
-                        scene_markdown = _parse_json_to_markdown(scene_content['content'])
+                        scene_markdown, current_act = _parse_json_to_markdown(scene_content['content'],
+                                                                                   current_act)
                         full_script_markdown += "\n" + scene_markdown
 
                         _save_scene_output(scene_content, scene_markdown, sub_scene['sub_scene_number'])
@@ -112,8 +131,11 @@ class SceneGenerator:
                 best_score = total_score
 
             if total_score >= self.good_scene_threshold:
+                logger.info(f"Scene {sub_scene['sub_scene_number']} generated successfully with score {total_score}")
                 return {'scene_number': sub_scene['sub_scene_number'], 'content': scene_content,
                         'evaluation': evaluation}
+
+            logger.info(f"Scene {sub_scene['sub_scene_number']} generated with score {total_score}. Refining...\n\tFeedback: {evaluation['feedback']}")
 
             if attempt < self.max_iterations - 1:  # Don't refine on the last iteration
                 scene_content = self._refine_scene(scene_content, evaluation['feedback'], sub_scene, story,
@@ -152,7 +174,7 @@ class SceneGenerator:
             themes=self.themes,
             genre=self.config.get('genre', 'movie'),
         )
-        return self.llm_service.generate(prompt, format="json")
+        return self.llm_service_validation.generate(prompt, format="json")
 
     def _refine_scene(self, scene_content: Dict[str, Any], feedback: str, sub_scene: Dict[str, Any],
                       story: Dict[str, Any], full_script_markdown: str) -> Optional[Dict[str, Any]]:

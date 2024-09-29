@@ -6,20 +6,17 @@ class JSONValidator:
     @staticmethod
     def validate_scene_json(scene_json: str) -> Optional[Dict[str, Any]]:
         try:
-            # First, try to parse the JSON
-            parsed_json = json.loads(scene_json)
-
             # Check for required keys
             required_keys = ["scene_number", "location", "time", "content"]
             for key in required_keys:
-                if key not in parsed_json:
+                if key not in scene_json:
                     raise KeyError(f"Missing required key: {key}")
 
             # Validate content structure
-            if not isinstance(parsed_json["content"], list):
+            if not isinstance(scene_json["content"], list):
                 raise TypeError("'content' must be a list")
 
-            for item in parsed_json["content"]:
+            for item in scene_json["content"]:
                 if not isinstance(item, dict):
                     raise TypeError("Each item in 'content' must be a dictionary")
 
@@ -35,7 +32,7 @@ class JSONValidator:
                 if item["type"] == "dialog" and "character" not in item:
                     raise KeyError("Dialog items must have a 'character'")
 
-            return parsed_json
+            return scene_json
         except json.JSONDecodeError as e:
             print(f"Invalid JSON: {e}")
         except (KeyError, TypeError, ValueError) as e:
