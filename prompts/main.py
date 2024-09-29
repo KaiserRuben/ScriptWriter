@@ -6,9 +6,6 @@ Concept:
 Outline:
 {outline}
 
-Initial Script:
-{initial_script}
-
 For each main character, provide the following information in JSON format:
 1. Name and rank/role
 2. Species and relevant background
