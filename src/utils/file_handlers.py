@@ -1,6 +1,8 @@
 import json
 import os
 import logging
+from typing import Union
+
 
 def load_json(file_path: str) -> dict:
     try:
@@ -13,7 +15,7 @@ def load_json(file_path: str) -> dict:
         logging.error(f"Invalid JSON in file: {file_path}")
         return {}
 
-def save_json(file_path: str, data: dict):
+def save_json(file_path: str, data: Union[dict, list]):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
         json.dump(data, f, indent=2)

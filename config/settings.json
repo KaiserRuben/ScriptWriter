@@ -1,7 +1,8 @@
 {
   "max_outline_generation_attempts": 10,
-  "max_scene_iterations": 10,
-  "good_scene_threshold": 0.8,
+  "max_scene_iterations": 5,
+  "good_scene_threshold": 90,
+  "genre": "psychological sci-fi thriller",
   "_llm_provider": "replicate",
   "_llm_model": "meta/meta-llama-3-70b-instruct",
   "lm_provider": "ollama",

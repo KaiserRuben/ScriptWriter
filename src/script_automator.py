@@ -1,30 +1,16 @@
 import logging
-from typing import Dict, Any
 
 from replicate.exceptions import ModelError
 from tqdm import tqdm
 import json
 
-from prompts.main import DEVELOP_CHARACTERS, IDENTIFY_THEMES, WRITE_SCENE, EVALUATE_SCENE, REVIEW_SCRIPT
+from prompts.main import DEVELOP_CHARACTERS, IDENTIFY_THEMES
 from prompts.outline import GENERATE_ACTS, VALIDATE_ACTS, GENERATE_KEY_SCENES, VALIDATE_KEY_SCENES, GENERATE_SUB_SCENES, \
     VALIDATE_SUB_SCENES, REVIEW_OUTLINE, VALIDATE_FINAL_OUTLINE
 from src.llm.LLMService import LLMService
-from src.utils.file_handlers import load_json, save_json, load_txt, save_txt
-
-
-def sort_json_content(json_data: Dict[str, Any]) -> Dict[str, Any]:
-    # Sort acts
-    json_data['acts'] = sorted(json_data['acts'], key=lambda x: x['act_number'])
-
-    # Sort scenes and sub-scenes within each act
-    for act in json_data['acts']:
-        act['scenes'] = sorted(act['scenes'], key=lambda x: float(x['scene_number']))
-
-        for scene in act['scenes']:
-            if 'sub_scenes' in scene:
-                scene['sub_scenes'] = sorted(scene['sub_scenes'], key=lambda x: x['sub_scene_number'])
-
-    return json_data
+from src.scene_generator import SceneGenerator
+from src.utils.file_handlers import load_json, save_json, load_txt
+from src.utils.sort_and_compare import sort_json_content
 
 
 def merge_outlines(original_outline, new_outline):
@@ -83,26 +69,27 @@ def merge_outlines(original_outline, new_outline):
 
 
 class ScriptAutomator:
-    def __init__(self, initial_script=None):
+    def __init__(self):
         self.config = load_json('config/settings.json')
         self.llm_service = LLMService(provider_name=self.config.get('llm_provider', 'ollama'),
                                       default_model=self.config.get('llm_model', 'gemma2:27b'))
         self.max_iterations = self.config.get('max_scene_iterations', 5)
         self.good_scene_threshold = self.config.get('good_scene_threshold', 0.8)
-        self.initial_script = initial_script
         self.use_local_context = self.config.get('use_local_context', True)
+
 
     def run(self):
         concept = load_txt('data/concept.txt')
         # outline = self.generate_outline(concept)
-        outline = sort_json_content(load_json('data/outline.json'))
-        characters = self.develop_characters(concept, outline)
-        themes = self.identify_themes(concept, outline)
-        script = self.write_scenes(outline, characters, themes)
-        analysis = self.review_script(script, outline, characters, themes)
+        outline = load_json('data/outline.json')
+        # characters = self.develop_characters(concept, outline)
+        characters = load_json('data/characters.json')
+        # themes = self.identify_themes(concept, outline)
+        themes = load_json('data/themes.json')
 
-        save_txt('output/full_script.txt', script)
-        save_json('output/script_analysis.json', analysis)
+        scene_generator = SceneGenerator(self.llm_service, self.config, characters, themes)
+        scenes = scene_generator.generate_scenes(outline)
+        save_json('data/scenes.json', scenes)
         logging.info("Script generation complete. Check the 'output' folder for results.")
 
     def generate_outline(self, concept):
@@ -182,101 +169,7 @@ class ScriptAutomator:
         prompt = IDENTIFY_THEMES.format(
             concept=concept,
             outline=json.dumps(outline),
-            initial_script=self.initial_script if self.initial_script else "No initial script provided."
         )
         themes = self.llm_service.generate(prompt, format="json")
         save_json('data/themes.json', themes)
         return themes
-
-    def write_scenes(self, outline, characters, themes):
-        logging.info("Writing scenes")
-        full_script = self.initial_script + "\n\n" if self.initial_script else ""
-
-        for act in tqdm(outline['acts'], desc="Writing acts"):
-            for scene in tqdm(act['scenes'], desc=f"Writing scenes for Act {act['act_number']}", leave=False):
-                scene_content = self.write_single_scene(scene, act, outline, characters, themes, full_script)
-                scene_filename = f"data/script_sections/act_{act['act_number']}_scene_{scene['scene_number']}.txt"
-                save_txt(scene_filename, scene_content)
-                full_script += scene_content + "\n\n"
-
-        return full_script
-
-    def write_single_scene(self, scene, act, outline, characters, themes, full_script):
-        best_scene = ""
-        best_score = 0
-
-        # Determine the context to use
-        if self.use_local_context:
-            context = self.get_local_context(scene, act, outline)
-        else:
-            context = full_script
-
-        for i in range(self.max_iterations):
-            prompt = WRITE_SCENE.format(
-                scene=json.dumps(scene),
-                act=json.dumps(act),
-                outline=json.dumps(outline),
-                characters=json.dumps(characters),
-                themes=json.dumps(themes),
-                context=context,
-                initial_script=self.initial_script if self.initial_script else "No initial script provided."
-            )
-            scene_content = self.llm_service.generate(prompt)
-            score, feedback = self.evaluate_scene(scene_content, scene, act, outline, characters, themes, context)
-
-            if score > best_score:
-                best_scene = scene_content
-                best_score = score
-
-            if score >= self.good_scene_threshold:
-                logging.info(f"Acceptable scene generated after {i + 1} iterations")
-                return scene_content
-
-            logging.info(f"Scene iteration {i + 1} score: {score}. Feedback: {feedback}")
-
-        logging.warning(
-            f"Could not generate satisfactory scene after {self.max_iterations} iterations. Using best scene (score: {best_score})")
-        return best_scene
-
-    def get_local_context(self, scene, act, outline):
-        context = ""
-
-        # Get the previous scene in the same act
-        scene_index = act['scenes'].index(scene)
-        if scene_index > 0:
-            prev_scene = act['scenes'][scene_index - 1]
-            context += f"Previous scene: {json.dumps(prev_scene)}\n\n"
-
-        # Get the next scene in the same act
-        if scene_index < len(act['scenes']) - 1:
-            next_scene = act['scenes'][scene_index + 1]
-            context += f"Next scene: {json.dumps(next_scene)}\n\n"
-
-        context += f"Current act number: {act['act_number']}\n\n"
-
-        return context
-
-    def evaluate_scene(self, scene_content, scene, act, outline, characters, themes, context):
-        prompt = EVALUATE_SCENE.format(
-            scene_content=scene_content,
-            scene=json.dumps(scene),
-            act=json.dumps(act),
-            outline=json.dumps(outline),
-            characters=json.dumps(characters),
-            themes=json.dumps(themes),
-            context=context,
-        )
-        evaluation = self.llm_service.generate(prompt, format="json")
-        return evaluation['score'], evaluation['feedback']
-
-    def review_script(self, script, outline, characters, themes):
-        logging.info("Reviewing script")
-        prompt = REVIEW_SCRIPT.format(
-            script=script,
-            outline=json.dumps(outline),
-            characters=json.dumps(characters),
-            themes=json.dumps(themes),
-            initial_script=self.initial_script if self.initial_script else "No initial script provided."
-        )
-        analysis = self.llm_service.generate(prompt, format="json")
-        return analysis

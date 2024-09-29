@@ -52,9 +52,6 @@ Concept:
 Outline:
 {outline}
 
-Initial Script:
-{initial_script}
-
 Identify and elaborate on the following in JSON format:
 1. Main theme: The central philosophical or psychological question the story explores.
 2. Sub-themes: Supporting themes that contribute to the main theme and overall narrative.
@@ -308,3 +305,4 @@ Provide your review in the following JSON format:
   "overall_impression": "...",
   "franchise_impact": "..."
 }}"""
+
