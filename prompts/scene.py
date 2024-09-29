@@ -9,15 +9,11 @@ Themes:
 Outline: 
 {outline}
 
-Story Elements:
-{story_elements}
-
-Previous Scene: 
-{previous_scene}
-
 Current Scene: 
 {current_scene}
 
+Script Context (Last {context_length} characters): 
+{full_script_context}
 
 Task:
 As an expert screenwriter with deep knowledge of the {genre} genre, your task is to write a compelling screenplay for the current scene. This scene should seamlessly integrate into the larger narrative (Outline) while advancing the plot, developing characters, and exploring key themes.
@@ -26,15 +22,29 @@ Guidelines:
 1. Maintain consistency with the established characters, their voices, and arcs.
 2. Advance the plot in meaningful ways that align with the outline.
 3. Incorporate and explore the identified themes relevant to this scene.
-4. Use vivid descriptions and engaging dialogue.
-5. Ensure the scene fits within the given context and flows naturally from the previous scene.
+4. Use vivid descriptions for actions and engaging dialogue.
+5. Ensure the scene fits within the given context and flows naturally from the previous scenes.
 6. Pay special attention to the unique elements of {genre}, incorporating them organically into the scene.
-7. Continue where the previous scene left off, following the outline maintaining the established tone and atmosphere.
-8. Utilize the story elements to maintain consistency and continuity throughout the script.
-9. "Show, don't tell" - use actions and dialogue to convey information and emotions effectively.
+7. Utilize the provided context to maintain consistency and continuity throughout the script.
+8. "Show, don't tell" - use actions and dialogue to convey information and emotions effectively.
 
-If you are writing the first scene of an Act, include "--\n## Act [Number]" at the beginning.
-Always include the scene number, title, location and time (if applicable) at the beginning of the scene.
+Output Format:
+Provide the scene in the following JSON format:
+
+{{
+  "scene_number": "string",
+  "location": "string",
+  "time": "string",
+  "content": [
+    {{
+      "type": "action" | "dialog" | "transition",
+      "character": "string" (only if type is "dialog"),
+      "text": "string"
+    }}
+  ]
+}}
+
+Ensure all required fields are included and formatted correctly.
 """
 
 EVALUATE_SCENE = """
@@ -51,9 +61,8 @@ Characters:
 Themes: 
 {themes}
 
-Current Scene: 
+Current Scene (in Markdown format): 
 {scene_content}
-
 
 Task:
 As a seasoned script editor and {genre} expert, critically evaluate the current scene (in its context -> Outline) based on the following criteria:
@@ -76,10 +85,10 @@ Respond in the following JSON format:
     "thematic_exploration": {{"justification": "","score": 0}},
     "dialogue_quality": {{"justification": "","score": 0}},
     "descriptive_writing": {{"justification": "","score": 0}},
-    "story_consistency":{{"justification": "","score": 0}}
+    "story_consistency": {{"justification": "","score": 0}}
   }},
   "total_score": 0,
-  "feedback": "Specific feedback here, organised by areas for improvement",
+  "feedback": "Specific feedback here, organized by areas for improvement"
 }}
 """
 
@@ -91,7 +100,7 @@ Characters:
 Themes: 
 {themes}
 
-Original Scene: 
+Original Scene (in JSON format): 
 {scene_content}
 
 Feedback: 
@@ -100,6 +109,8 @@ Feedback:
 Scene Details: 
 {scene_details}
 
+Full Script Context (Last {context_length} characters): 
+{full_script_context}
 
 Task:
 As a skilled script doctor specializing in {genre}, your task is to refine the given scene based on the provided feedback. Your goal is to address the issues raised while maintaining the scene's core elements, purpose, and style consistency with the initial script.
@@ -112,7 +123,25 @@ Guidelines for refinement:
 5. Improve descriptive writing and atmosphere where indicated, ensuring it aligns with the {genre}.
 6. Ensure consistency with the overall story and character arcs.
 7. Maintain the writing style established in the initial script.
+8. Use the provided context to ensure continuity with previous scenes.
 
+Output Format:
+Provide the refined scene in the following JSON format:
+
+{{
+  "scene_number": "string",
+  "location": "string",
+  "time": "string",
+  "content": [
+    {{
+      "type": "action" | "dialog" | "transition",
+      "character": "string" (only if type is "dialog"),
+      "text": "string"
+    }}
+  ]
+}}
+
+Ensure all required fields are included and formatted correctly.
 """
 
 EXTRACT_STORY_ELEMENTS = """
