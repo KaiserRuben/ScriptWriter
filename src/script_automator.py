@@ -89,7 +89,7 @@ class ScriptAutomator:
 
         scene_generator = SceneGenerator(self.llm_service, self.config, characters, themes)
         scenes = scene_generator.generate_scenes(outline)
-        save_json('data/scenes.json', scenes)
+        save_json('output/scenes_final.json', scenes)
         logging.info("Script generation complete. Check the 'output' folder for results.")
 
     def generate_outline(self, concept):
