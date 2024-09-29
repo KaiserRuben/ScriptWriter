@@ -77,20 +77,31 @@ class ScriptAutomator:
         self.good_scene_threshold = self.config.get('good_scene_threshold', 0.8)
         self.use_local_context = self.config.get('use_local_context', True)
 
-
-    def run(self):
+    def run(self, generate_outline=True, generate_characters=True, generate_themes=True, generate_scenes=False):
+        logging.info("Starting script automation process")
         concept = load_txt('data/concept.txt')
-        # outline = self.generate_outline(concept)
-        outline = load_json('data/outline.json')
-        # characters = self.develop_characters(concept, outline)
-        characters = load_json('data/characters.json')
-        # themes = self.identify_themes(concept, outline)
-        themes = load_json('data/themes.json')
+        if generate_outline:
+            outline = self.generate_outline(concept)
+        else:
+            outline = load_json('output/outline.json')
 
-        scene_generator = SceneGenerator(self.llm_service, self.config, characters, themes)
-        scenes = scene_generator.generate_scenes(outline)
-        save_json('output/scenes_final.json', scenes)
-        logging.info("Script generation complete. Check the 'output' folder for results.")
+        if generate_characters:
+            characters = self.develop_characters(concept, outline)
+        else:
+            characters = load_json('output/characters.json')
+
+        if generate_themes:
+            themes = self.identify_themes(concept, outline)
+        else:
+            themes = load_json('output/themes.json')
+
+        if generate_scenes:
+            scene_generator = SceneGenerator(self.llm_service, self.config, characters, themes)
+            scenes = scene_generator.generate_scenes(outline)
+            save_json('output/scenes_final.json', scenes)
+
+        logging.info("Generation complete. Check the 'output' folder for results.")
+
 
     def generate_outline(self, concept):
         logging.info("Generating outline")
@@ -113,7 +124,7 @@ class ScriptAutomator:
         # Merge the final_outline with the original outline
         merged_outline = sort_json_content(merge_outlines(outline, final_outline))
 
-        save_json('data/outline.json', merged_outline)
+        save_json('output/outline.json', merged_outline)
         return merged_outline
 
     def _generate_and_validate(self, generate_prompt, validate_prompt, **kwargs):
@@ -158,10 +169,9 @@ class ScriptAutomator:
         prompt = DEVELOP_CHARACTERS.format(
             concept=concept,
             outline=json.dumps(outline),
-            initial_script=self.initial_script if self.initial_script else "No initial script provided."
         )
         characters = self.llm_service.generate(prompt, format="json")
-        save_json('data/characters.json', characters)
+        save_json('output/characters.json', characters)
         return characters
 
     def identify_themes(self, concept, outline):
@@ -171,5 +181,5 @@ class ScriptAutomator:
             outline=json.dumps(outline),
         )
         themes = self.llm_service.generate(prompt, format="json")
-        save_json('data/themes.json', themes)
+        save_json('output/themes.json', themes)
         return themes
