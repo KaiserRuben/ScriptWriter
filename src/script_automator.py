@@ -79,7 +79,7 @@ class ScriptAutomator:
         self.good_scene_threshold = self.config.get('good_scene_threshold', 0.8)
         self.use_local_context = self.config.get('use_local_context', True)
 
-    def run(self, generate_outline=False, generate_characters=False, generate_themes=False, generate_scenes=False):
+    def run(self, generate_outline=False, generate_characters=False, generate_themes=False, generate_scenes=False, start_with_scene=None):
         logging.info("Starting script automation process")
         concept = load_txt('data/concept.txt')
         if generate_outline:
@@ -99,7 +99,7 @@ class ScriptAutomator:
 
         if generate_scenes:
             scene_generator = SceneGenerator(self.llm_service, self.llm_service_validation, self.config, characters, themes)
-            scenes = scene_generator.generate_scenes(outline)
+            scenes = scene_generator.generate_scenes(outline, start_with_scene=start_with_scene)
 
         logging.info("Generation complete. Check the 'output' folder for results.")
 

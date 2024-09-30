@@ -1,4 +1,5 @@
 import json
+import os
 from copy import deepcopy
 from math import inf
 from typing import Dict, Any, List, Optional, Tuple
@@ -10,6 +11,7 @@ from prompts.scene import GENERATE_SCENE, EVALUATE_SCENE, REFINE_SCENE, EXTRACT_
 from src.llm.LLMService import LLMService
 from src.utils.JSONValidator import JSONValidator
 from src.utils.file_handlers import load_txt, save_json, save_txt
+from src.utils.sort_and_compare import compare_scene_numbers
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,28 @@ def _save_scene_output(scene_content: Dict[str, Any], scene_markdown: str, scene
     save_txt(f'output/scenes/scene_{scene_number}.md', scene_markdown)
 
 
+def _load_existing_scenes(start_with_scene: str) -> Tuple[List[Dict[str, Any]], str]:
+    generated_scenes = []
+    full_script_markdown = ""
+
+    scene_files = sorted(os.listdir('output/scenes'), key=lambda x: x.split('_')[1].split('.')[0])
+    for scene_file in scene_files:
+        scene_number = scene_file.split('_')[1].split('.')[0]
+        if compare_scene_numbers(scene_number, start_with_scene) >= 0:
+            break
+
+        if scene_file.endswith('.json'):
+            with open(f'output/scenes/{scene_file}', 'r') as f:
+                scene_content = json.load(f)
+            generated_scenes.append(scene_content)
+
+        elif scene_file.endswith('.md'):
+            with open(f'output/scenes/{scene_file}', 'r') as f:
+                full_script_markdown += f.read() + "\n"
+
+    return generated_scenes, full_script_markdown
+
+
 class SceneGenerator:
     def __init__(self, llm_service: LLMService, llm_service_validation: LLMService, config: Dict[str, Any], characters: Dict[str, Any],
                  themes: Dict[str, Any]):
@@ -92,21 +116,29 @@ class SceneGenerator:
         self.max_iterations = config.get('max_scene_iterations', 5)
         self.full_script_threshold = config.get('full_script_threshold', 85)
 
-    def generate_scenes(self, story: Dict[str, Any], start_with_scene="2.2.8") -> List[Dict[str, Any]]:
+    def generate_scenes(self, story: Dict[str, Any], start_with_scene: str = None) -> List[Dict[str, Any]]:
         generated_scenes = []
         full_script_markdown = ""
         current_act = None
+
+        # Load existing scenes if start_with_scene is specified
+        if start_with_scene:
+            generated_scenes, full_script_markdown = _load_existing_scenes(start_with_scene)
+            current_act = int(start_with_scene.split('.')[0])
 
         total_sub_scenes = sum([len(scene.get('sub_scenes', [])) for act in story['acts'] for scene in act['scenes']])
         with tqdm(total=total_sub_scenes, desc="Generating scenes", unit="sub-scene") as pbar:
             for act in story['acts']:
                 for scene in act['scenes']:
                     for sub_scene in scene.get('sub_scenes', []):
+                        if start_with_scene and compare_scene_numbers(sub_scene['sub_scene_number'], start_with_scene) < 0:
+                            pbar.update(1)
+                            continue
+
                         scene_content = self._generate_single_scene(sub_scene, story, full_script_markdown)
                         generated_scenes.append(scene_content)
 
-                        scene_markdown, current_act = _parse_json_to_markdown(scene_content['content'],
-                                                                                   current_act)
+                        scene_markdown, current_act = _parse_json_to_markdown(scene_content['content'], current_act)
                         full_script_markdown += "\n" + scene_markdown
 
                         _save_scene_output(scene_content, scene_markdown, sub_scene['sub_scene_number'])
@@ -123,7 +155,7 @@ class SceneGenerator:
 
         # Save refined full script
         refined_full_script_markdown = "\n".join(
-            [_parse_json_to_markdown(scene['content']) for scene in refined_scenes])
+            [_parse_json_to_markdown(scene['content'])[0] for scene in refined_scenes])
         save_txt('output/full_script_refined.md', refined_full_script_markdown)
         save_json('output/scenes_refined.json', refined_scenes)
 
