@@ -34,6 +34,9 @@ class OllamaProvider(BaseProvider):
             "model": model,
             "prompt": prompt,
             "stream": stream,
+            "options":{
+                "num_predict": -1,
+                      },
             **kwargs
         }
         if format == "json":

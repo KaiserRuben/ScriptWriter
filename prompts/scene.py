@@ -1,19 +1,14 @@
 GENERATE_SCENE = """
-Data:
-Characters: 
-{characters}
-
-Themes: 
-{themes}
-
 Outline: 
 {outline}
 
 Current Scene: 
 {current_scene}
 
-Script Context (Last {context_length} characters): 
-{full_script_context}
+Script Context (Last {context_length} characters to be continued with the current scene): 
+\"\"\"
+...{full_script_context}
+\"\"\"
 
 Task:
 As an expert screenwriter with deep knowledge of the {genre} genre, your task is to write a compelling screenplay for the current scene. This scene should seamlessly integrate into the larger narrative (Outline) while advancing the plot, developing characters, and exploring key themes.
@@ -58,7 +53,7 @@ Characters:
 Themes: 
 {themes}
 
-Current Scene Description: 
+Current Scene Information: 
 {scene_details}
 
 
@@ -130,7 +125,7 @@ Output Format:
 Provide the refined scene in the following JSON format:
 
 {{
-  "scene_number": "string",
+  "scene_number": "string", // example: "1.1.1"
   "location": "string",
   "time": "string",
   "content": [
@@ -142,7 +137,7 @@ Provide the refined scene in the following JSON format:
   ]
 }}
 
-Ensure all required fields are included and formatted correctly.
+Ensure all required fields are included and formatted correctly. Return only the JSON of the refined scene, start with {{...
 """
 
 EXTRACT_STORY_ELEMENTS = """

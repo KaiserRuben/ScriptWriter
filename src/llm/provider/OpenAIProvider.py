@@ -10,11 +10,14 @@ from openai.types.completion import Completion
 
 from src.llm.provider.BaseProvider import BaseProvider
 from dotenv import load_dotenv
+
 load_dotenv()
+
 
 class OpenAIProvider(BaseProvider):
     def __init__(self, api_key: str = None):
-        self.client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+        os.environ["OPENAI_API_KEY"] = "***REMOVED***"
+        self.client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"), base_url="http://192.168.0.254:4000")
         self.logger = logging.getLogger(__name__)
 
     def name(self) -> str:
@@ -46,11 +49,18 @@ class OpenAIProvider(BaseProvider):
         else:
             content = response.choices[0].message.content
             try:
-                return json.loads(content) if format == "json" else content
-            except json.JSONDecodeError as e:
-                p = re.compile('(?<!\\\\)\'')
-                content = p.sub('\"', content)
-                return json.loads(content) if format == "json" else content
+                try:
+                    try:
+                        return json.loads(content) if format == "json" else content
+                    except json.JSONDecodeError as e:
+                        p = re.compile('(?<!\\\\)\'')
+                        content = p.sub('\"', content)
+                        return json.loads(content) if format == "json" else content
+                except json.JSONDecodeError as e:
+                    content = content.split("\n",1)[1]
+            except Exception as e:
+                self.logger.error(f"Error in generate: {str(e)}")
+                return content
 
     def chat(self, model: str, messages: List[Dict], stream: bool = True, format: str = None, **kwargs) -> Union[
         Dict, Generator]:

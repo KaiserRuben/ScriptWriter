@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from math import inf
 from typing import Dict, Any, List, Optional, Tuple
 import logging
@@ -36,7 +37,7 @@ def _parse_json_to_markdown(scene_json: Dict[str, Any], current_act: int = None)
         scene_act = int(scene_json['scene_number'].split('.')[0])
     except Exception as e:
         try:
-            scene_act = int(scene_json['scene_number'].split(' ')[1])
+            scene_act = int(scene_json['scene_number'].split(' ')[1][0])
         except Exception as e:
             scene_act = -1
 
@@ -57,6 +58,21 @@ def _parse_json_to_markdown(scene_json: Dict[str, Any], current_act: int = None)
 
     return markdown, current_act
 
+def _truncate_story(story: Dict[str, Any], sub_scene: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Truncates the story to only include all subscenes for the current subscene,
+    all other subscenes in the story are removed.
+    """
+    truncated_story = deepcopy(story)
+    for act in truncated_story['acts']:
+        for scene in act['scenes']:
+            sub_scene_numbers = [sub_scene['sub_scene_number'] for sub_scene in scene['sub_scenes']]
+            if sub_scene['sub_scene_number'] not in sub_scene_numbers:
+                # delete key sub_scenes from scene
+                scene.pop('sub_scenes', None)
+
+
+    return truncated_story
 
 def _save_scene_output(scene_content: Dict[str, Any], scene_markdown: str, scene_number: str):
     save_json(f'output/scenes/scene_{scene_number}.json', scene_content)
@@ -76,7 +92,7 @@ class SceneGenerator:
         self.max_iterations = config.get('max_scene_iterations', 5)
         self.full_script_threshold = config.get('full_script_threshold', 85)
 
-    def generate_scenes(self, story: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def generate_scenes(self, story: Dict[str, Any], start_with_scene="2.2.8") -> List[Dict[str, Any]]:
         generated_scenes = []
         full_script_markdown = ""
         current_act = None
@@ -118,13 +134,18 @@ class SceneGenerator:
         best_scene = None
         best_score = 0
 
+        story_truncated = _truncate_story(story, sub_scene)
+
+        scene_content = self._generate_scene(sub_scene, story_truncated, full_script_markdown)
         for attempt in range(self.max_iterations):
-            scene_content = self._generate_scene(sub_scene, story, full_script_markdown)
             if scene_content is None:
                 continue  # Skip evaluation if generation failed
 
-            evaluation = self._evaluate_scene(scene_content, sub_scene, story)
-            total_score = evaluation.get('total_score', 0)
+            evaluation = self._evaluate_scene(scene_content, sub_scene, story_truncated)
+            try:
+                total_score = evaluation.get('total_score', 0)
+            except AttributeError:
+                total_score = 0
 
             if total_score > best_score:
                 best_scene = scene_content
@@ -135,12 +156,22 @@ class SceneGenerator:
                 return {'scene_number': sub_scene['sub_scene_number'], 'content': scene_content,
                         'evaluation': evaluation}
 
-            logger.info(f"Scene {sub_scene['sub_scene_number']} generated with score {total_score}. Refining...\n\tFeedback: {evaluation['feedback']}")
+            feedback = ""
+            try:
+                logger.info(f"Scene {sub_scene['sub_scene_number']} generated with score {total_score}. Refining... (try {attempt+1} of {self.max_iterations})"
+                        f"\n\tFeedback: {evaluation['feedback']}")
+                feedback = evaluation['feedback']
+            except TypeError as e:
+                logger.info(f"Scene {sub_scene['sub_scene_number']} generated with score {total_score}. Refining... (try {attempt+1} of {self.max_iterations})"
+                            f"\n\tFeedback: {evaluation}")
+                feedback = evaluation
+
 
             if attempt < self.max_iterations - 1:  # Don't refine on the last iteration
-                scene_content = self._refine_scene(scene_content, evaluation['feedback'], sub_scene, story,
+                scene_content = self._refine_scene(scene_content, feedback, sub_scene, story_truncated,
                                                    full_script_markdown)
 
+        logger.info(f"Scene {sub_scene['sub_scene_number']} could not be refined further. Using the best attempt (score: {best_score})")
         return {'scene_number': sub_scene['sub_scene_number'], 'content': best_scene, 'score': best_score}
 
     def _generate_scene(self, sub_scene: Dict[str, Any], story: Dict[str, Any],
@@ -151,8 +182,8 @@ class SceneGenerator:
         context_length = len(context)
 
         prompt = GENERATE_SCENE.format(
-            characters=self.characters,
-            themes=self.themes,
+            # characters=self.characters,
+            # themes=self.themes,
             outline=story,
             current_scene=sub_scene,
             full_script_context=context,

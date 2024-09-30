@@ -26,6 +26,7 @@ Provide the character profiles in the following JSON format:
   "character_name": {{
     "rank": "...",
     "species": "...",
+    "script_name": "...",
     "background": "...",
     "personality": ["..."],
     "strengths": ["..."],

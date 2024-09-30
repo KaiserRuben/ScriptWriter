@@ -4,11 +4,11 @@
   "good_scene_threshold": 90,
   "full_script_threshold": 90,
   "genre": "psychological sci-fi thriller",
-  "context_length": 5000,
+  "context_length": 20000,
+  "llm_provider": "openai",
+  "llm_model": "antrophic | claude-3.5-sonnet",
   "llm_provider_validation": "ollama",
   "llm_model_validation": "gemma2:27b",
-  "llm_provider": "ollama",
-  "llm_model": "gemma2:27b",
   "llm_fallback_provider": "openai",
   "llm_fallback_model": "gpt-4o"
 }
