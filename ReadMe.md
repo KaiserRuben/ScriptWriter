@@ -143,7 +143,7 @@ Adjust these settings to fine-tune the generation process and output quality.
 
 ## 📘 Example Output
 
-
+Examples can be found in the [examples](examples) folder. These include generated outlines, character profiles, themes, and scenes for an example movie concepts.
 ## 🚧 Limitations and Future Improvements
 
 - The current version may produce inconsistencies in character behavior or plot details across scenes.
