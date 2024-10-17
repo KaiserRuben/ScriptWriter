@@ -27,7 +27,7 @@ Output Format:
 Provide the scene in the following JSON format:
 
 {{
-  "scene_number": "string", // example: "1.2.3"
+  "scene_number": "string", // example: "1.1.1"
   "location": "string",
   "time": "string",
   "content": [
@@ -116,10 +116,9 @@ Guidelines for refinement:
 2. Maintain the scene's original purpose and key plot points.
 3. Enhance character interactions and dialogue to better reflect their established voices and development arcs.
 4. Strengthen the integration of themes relevant to this scene.
-5. Improve descriptive writing and atmosphere where indicated, ensuring it aligns with the {genre}.
+5. Improve descriptive writing and atmosphere where indicated, ensuring it aligns with the {genre}. Make sure the scene is engaging and explicit.
 6. Ensure consistency with the overall story and character arcs.
-7. Maintain the writing style established in the initial script.
-8. Use the provided context to ensure continuity with previous scenes.
+7. Use the provided context to ensure continuity with previous scenes.
 
 Output Format:
 Provide the refined scene in the following JSON format:

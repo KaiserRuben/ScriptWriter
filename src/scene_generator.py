@@ -1,6 +1,7 @@
 import json
 import os
 from copy import deepcopy
+from functools import cmp_to_key
 from math import inf
 from typing import Dict, Any, List, Optional, Tuple
 import logging
@@ -85,9 +86,16 @@ def _load_existing_scenes(start_with_scene: str) -> Tuple[List[Dict[str, Any]], 
     generated_scenes = []
     full_script_markdown = ""
 
-    scene_files = sorted(os.listdir('output/scenes'), key=lambda x: x.split('_')[1].split('.')[0])
+    def extract_scene_number(filename):
+        nr = filename.split('_')[1].split('.')[:-1]
+        return ".".join(nr)
+
+    scene_files = [f for f in os.listdir('output/scenes') if f.startswith('scene_')]
+    scene_files.sort(
+        key=cmp_to_key(lambda x, y: compare_scene_numbers(extract_scene_number(x), extract_scene_number(y))))
+
     for scene_file in scene_files:
-        scene_number = scene_file.split('_')[1].split('.')[0]
+        scene_number = extract_scene_number(scene_file)
         if compare_scene_numbers(scene_number, start_with_scene) >= 0:
             break
 
