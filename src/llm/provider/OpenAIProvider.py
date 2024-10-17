@@ -13,10 +13,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class OpenAIProvider(BaseProvider):
     def __init__(self, api_key: str = None):
-        os.environ["OPENAI_API_KEY"] = "***REMOVED***"
         self.client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"), base_url="http://192.168.0.254:4000")
         self.logger = logging.getLogger(__name__)
 
