@@ -1,0 +1,138 @@
+{
+  "scene_number": "1.1.2",
+  "content": {
+    "scene_number": "1.1.2",
+    "location": "USS HORIZON - BRIDGE",
+    "time": "MORNING",
+    "content": [
+      {
+        "type": "action",
+        "text": "The bridge of the USS Horizon hums with anticipation. Holographic displays flicker with data streams, casting an ethereal glow over the assembled crew. CAPTAIN ELARA VENN strides in, her presence immediately commanding attention."
+      },
+      {
+        "type": "dialog",
+        "character": "CAPTAIN ELARA VENN",
+        "text": "Status report."
+      },
+      {
+        "type": "action",
+        "text": "COMMANDER ZAX steps forward, their alien features impassive."
+      },
+      {
+        "type": "dialog",
+        "character": "COMMANDER ZAX",
+        "text": "We've reached the coordinates, Captain. The anomaly is directly ahead, but our sensors are... struggling to make sense of it."
+      },
+      {
+        "type": "action",
+        "text": "Captain Venn nods, her eyes scanning the main viewscreen. A swirling mass of colors and distortions fills the display, seeming to shift and change even as they watch."
+      },
+      {
+        "type": "dialog",
+        "character": "CAPTAIN ELARA VENN",
+        "text": "Lt. Commander Imam, your analysis?"
+      },
+      {
+        "type": "action",
+        "text": "LT. COMMANDER DR. SAIRA IMAM looks up from her console, her eyes bright with a mix of excitement and concern. She steals a quick glance at Captain Venn before responding."
+      },
+      {
+        "type": "dialog",
+        "character": "LT. COMMANDER DR. SAIRA IMAM",
+        "text": "Captain, the anomaly appears to be emitting waves of... something. Not quite energy, not quite matter. It's unlike anything we've ever encountered. I'd like to launch a series of probes to gather more data."
+      },
+      {
+        "type": "action",
+        "text": "Captain Venn considers this, her brow furrowing slightly. For a moment, the bridge seems to waver around her, but she blinks and it stabilizes."
+      },
+      {
+        "type": "dialog",
+        "character": "CAPTAIN ELARA VENN",
+        "text": "Proceed with caution, Doctor. I want a full analysis of any potential risks before we commit to further action."
+      },
+      {
+        "type": "action",
+        "text": "Saira nods, her admiration for the captain's measured approach evident in her expression."
+      },
+      {
+        "type": "dialog",
+        "character": "LT. COMMANDER DR. SAIRA IMAM",
+        "text": "Of course, Captain. I'll coordinate with Engineering to ensure the probes are properly shielded."
+      },
+      {
+        "type": "action",
+        "text": "LT. KIRO VASH speaks up from the tactical station, his voice tinged with concern."
+      },
+      {
+        "type": "dialog",
+        "character": "LT. KIRO VASH",
+        "text": "Captain, I recommend we raise shields. That... thing out there is giving me a bad feeling."
+      },
+      {
+        "type": "action",
+        "text": "Captain Venn turns to Vash, her expression softening slightly."
+      },
+      {
+        "type": "dialog",
+        "character": "CAPTAIN ELARA VENN",
+        "text": "Your concerns are noted, Lieutenant. Let's not jump to conclusions, but stay alert. Maintain yellow alert status for now."
+      },
+      {
+        "type": "action",
+        "text": "Vash nods, not entirely satisfied but respecting the captain's decision. Captain Venn turns back to the main viewscreen, her voice taking on a more authoritative tone."
+      },
+      {
+        "type": "dialog",
+        "character": "CAPTAIN ELARA VENN",
+        "text": "This is what we're out here for, people. To push the boundaries of knowledge, to explore the unknown. But we do it carefully, methodically. Let's make Starfleet proud."
+      },
+      {
+        "type": "action",
+        "text": "The crew responds with a mix of 'Aye, Captain' and nods of agreement. As they turn back to their stations, Captain Venn's gaze lingers on the swirling anomaly. For a split second, she sees faces forming in the chaotic patterns, their expressions twisted in agony. She blinks hard, and the vision vanishes."
+      },
+      {
+        "type": "dialog",
+        "character": "CAPTAIN ELARA VENN",
+        "text": "(quietly, to herself) What are you?"
+      },
+      {
+        "type": "action",
+        "text": "The anomaly pulses on the viewscreen, as if in response to her whispered question. The bridge lights flicker almost imperceptibly, casting momentary shadows that seem to dance at the edge of perception."
+      },
+      {
+        "type": "transition",
+        "text": "FADE TO:"
+      }
+    ]
+  },
+  "evaluation": {
+    "criteria": {
+      "character_consistency": {
+        "justification": "Characters act in line with their established roles. Captain Venn is decisive yet cautious, Lt. Commander Imam is eager and scientifically minded, and Lt. Vash is concerned about potential danger. This consistency builds trust with the reader.",
+        "score": 18
+      },
+      "plot_advancement": {
+        "justification": "The scene introduces the anomaly and sets up the central conflict: investigating it while mitigating risk. The decision to launch probes, raise shields to yellow alert, and Captain Venn's internal questioning all move the plot forward.",
+        "score": 16
+      },
+      "thematic_exploration": {
+        "justification": "Hints at deeper themes are present: the allure and danger of the unknown, the responsibility of scientific exploration, and potentially the psychological impact of encountering something truly alien. The brief vision Captain Venn experiences adds intrigue and foreshadows potential psychological horror elements.",
+        "score": 15
+      },
+      "dialogue_quality": {
+        "justification": "Dialogue is functional and reveals character traits. It could be elevated by adding more subtext or nuance to certain exchanges.",
+        "score": 12
+      },
+      "descriptive_writing": {
+        "justification": "The descriptions are effective in creating a sense of mystery and unease. Phrases like 'swirling mass of colors and distortions' and 'faces forming in the chaotic patterns' paint a vivid picture without being overly verbose.",
+        "score": 13
+      },
+      "story_consistency": {
+        "justification": "The scene aligns well with established tropes of psychological sci-fi thrillers: unknown anomaly, cautious explorers, potential for psychic/psychological effects. The brief moment of instability experienced by Captain Venn sets the stage for potentially unsettling encounters.",
+        "score": 9
+      }
+    },
+    "total_score": 93,
+    "feedback": "Areas for Improvement:\n\n* **Dialogue Nuance:** While functional, the dialogue could benefit from subtext and subtle character interactions. Explore underlying tensions or unspoken concerns to add depth.\n* **Sensory Detail:** Enhance the atmosphere by incorporating more sensory details beyond sight. How does the anomaly sound? What is the tactile sensation of being near it?\n* **Captain Venn's Vision:**  Expand upon this intriguing moment. What emotions did she feel during the vision? Was it a premonition, a psychic intrusion, or something else entirely? This could be a key element for future plot development."
+  }
+}
